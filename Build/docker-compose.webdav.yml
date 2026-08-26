@@ -1,0 +1,11 @@
+services:
+  webdav:
+    image: bytemark/webdav:2.4
+    restart: "no"
+    ports:
+      - "8091:80"
+    environment:
+      AUTH_TYPE: Basic
+      USERNAME: webdav
+      PASSWORD: webdav-secret
+      LOCATION: /
