@@ -504,11 +504,20 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
     private function resourceExists(string $identifier, string $resourceType): bool
     {
         try {
-            $this->propFind($identifier, 0, $resourceType);
-            return true;
+            $properties = $this->propFind($identifier, 0, $resourceType);
         } catch (FileDoesNotExistException|FolderDoesNotExistException) {
             return false;
         }
+
+        // A WebDAV PROPFIND can succeed for a path that resolves to a resource of the
+        // *other* type (e.g. some servers answer a PROPFIND for "/Photos" - without the
+        // trailing slash a folder identifier is canonicalized to for file existence checks -
+        // with the same 207 response as for "/Photos/"). Without this check, fileExists()
+        // would incorrectly report true for an existing folder, and TYPO3 core would then
+        // try (and fail) to resolve it as a sys_file record instead of a folder.
+        $isCollection = $this->responseTranslator->translate($properties)['isCollection'];
+
+        return $resourceType === WebDavStatusCodeMapper::RESOURCE_FOLDER ? $isCollection : !$isCollection;
     }
 
     private function uploadFile(string $fileIdentifier, string $contents): void

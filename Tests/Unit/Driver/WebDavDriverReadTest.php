@@ -117,6 +117,29 @@ final class WebDavDriverReadTest extends UnitTestCase
     }
 
     #[Test]
+    public function fileExistsReturnsFalseWhenThePathIsActuallyAFolder(): void
+    {
+        // Some WebDAV servers answer a PROPFIND for a trailing-slash-less path (as used
+        // for file existence checks) with the same successful response as for the
+        // collection itself (e.g. via a redirect Sabre follows transparently).
+        $clientStub = self::createStub(Client::class);
+        $clientStub->method('propFind')->willReturn(['{DAV:}resourcetype' => new ResourceType('{DAV:}collection')]);
+        $driver = $this->createDriver([], $clientStub, 9115);
+
+        self::assertFalse($driver->fileExists('/Photos'));
+    }
+
+    #[Test]
+    public function folderExistsReturnsFalseWhenThePathIsActuallyAFile(): void
+    {
+        $clientStub = self::createStub(Client::class);
+        $clientStub->method('propFind')->willReturn(['{DAV:}getcontentlength' => '42']);
+        $driver = $this->createDriver([], $clientStub, 9116);
+
+        self::assertFalse($driver->folderExists('/notes.txt/'));
+    }
+
+    #[Test]
     public function getFolderInfoByIdentifierMapsNotFoundToFolderDoesNotExistException(): void
     {
         $clientStub = self::createStub(Client::class);
