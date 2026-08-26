@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<T3DataStructure>
+    <ROOT>
+        <type>array</type>
+        <el>
+            <baseUri>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.base_uri</label>
+                <config>
+                    <type>input</type>
+                    <size>40</size>
+                    <eval>trim,required</eval>
+                </config>
+            </baseUri>
+        </el>
+    </ROOT>
+</T3DataStructure>

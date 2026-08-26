@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.0">
+  <file source-language="en" datatype="plaintext" original="messages" date="2026-08-26T00:00:00Z" product-name="fal_webdav_driver">
+    <header/>
+    <body>
+      <trans-unit id="flexform.base_uri" resname="flexform.base_uri">
+        <source>WebDAV base URI</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
