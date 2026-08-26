@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  PHP_EXTENSIONS: mbstring, xml, curl, zip, intl, gd, mysqli, pdo_mysql, opcache
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer
+      - name: Cache composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-
+      - run: composer update --no-progress --prefer-dist
+      - run: composer ci:php:lint
+      - run: composer ci:php:cgl
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer
+      - name: Cache composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-
+      - run: composer update --no-progress --prefer-dist
+      - run: composer ci:php:phpstan
+
+  unit:
+    name: "Unit (PHP ${{ matrix.php-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.2", "8.3", "8.4"]
+    env:
+      TYPO3_CONSTRAINT: "^14.3"
+      CI_ROOT: /tmp/ci-root
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer
+      - name: Cache composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ matrix.php-version }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-${{ matrix.php-version }}-
+      - run: Build/Scripts/ci-bootstrap.sh "${CI_ROOT}" "${TYPO3_CONSTRAINT}"
+      - run: cd "${CI_ROOT}" && vendor/bin/phpunit -c packages/fal_webdav_driver/Build/UnitTests.xml
+
+  functional:
+    name: "Functional (PHP ${{ matrix.php-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.2"]
+    env:
+      TYPO3_CONSTRAINT: "^14.3"
+      CI_ROOT: /tmp/ci-root
+      WEBDAV_TEST_BASE_URI: "http://localhost:8080/"
+      WEBDAV_TEST_USERNAME: webdav
+      WEBDAV_TEST_PASSWORD: webdav-secret
+    services:
+      webdav:
+        image: bytemark/webdav:2.4
+        ports:
+          - 8080:80
+        env:
+          AUTH_TYPE: Basic
+          USERNAME: webdav
+          PASSWORD: webdav-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+          tools: composer
+      - name: Cache composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ matrix.php-version }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ runner.os }}-${{ matrix.php-version }}-
+      - run: Build/Scripts/ci-bootstrap.sh "${CI_ROOT}" "${TYPO3_CONSTRAINT}"
+      - run: cd "${CI_ROOT}" && vendor/bin/phpunit -c packages/fal_webdav_driver/Build/FunctionalTests.xml
