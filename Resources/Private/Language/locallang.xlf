@@ -6,6 +6,42 @@
       <trans-unit id="flexform.base_uri" resname="flexform.base_uri">
         <source>WebDAV base URI</source>
       </trans-unit>
+      <trans-unit id="flexform.auth_type" resname="flexform.auth_type">
+        <source>Authentication type</source>
+      </trans-unit>
+      <trans-unit id="flexform.auth_type.basic" resname="flexform.auth_type.basic">
+        <source>Basic authentication (username/password)</source>
+      </trans-unit>
+      <trans-unit id="flexform.auth_type.bearer" resname="flexform.auth_type.bearer">
+        <source>Bearer token</source>
+      </trans-unit>
+      <trans-unit id="flexform.username" resname="flexform.username">
+        <source>Username</source>
+      </trans-unit>
+      <trans-unit id="flexform.password" resname="flexform.password">
+        <source>Password</source>
+      </trans-unit>
+      <trans-unit id="flexform.password.description" resname="flexform.password.description">
+        <source>Stored in plain text in the storage configuration.</source>
+      </trans-unit>
+      <trans-unit id="flexform.bearer_token" resname="flexform.bearer_token">
+        <source>Bearer token</source>
+      </trans-unit>
+      <trans-unit id="flexform.verify_ssl" resname="flexform.verify_ssl">
+        <source>Verify SSL certificate</source>
+      </trans-unit>
+      <trans-unit id="flexform.case_sensitive" resname="flexform.case_sensitive">
+        <source>Case-sensitive identifiers</source>
+      </trans-unit>
+      <trans-unit id="flexform.cache_lifetime" resname="flexform.cache_lifetime">
+        <source>Local cache lifetime (seconds)</source>
+      </trans-unit>
+      <trans-unit id="flexform.public_base_uri" resname="flexform.public_base_uri">
+        <source>Public base URI</source>
+      </trans-unit>
+      <trans-unit id="flexform.public_base_uri.description" resname="flexform.public_base_uri.description">
+        <source>Only needed if the publicly accessible URL differs from the WebDAV base URI. Leave empty if files should not be publicly accessible.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

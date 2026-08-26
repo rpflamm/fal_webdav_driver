@@ -79,6 +79,13 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
             );
         }
 
+        if ($authType === 'bearer' && (!isset($this->configuration['bearerToken']) || $this->configuration['bearerToken'] === '')) {
+            throw new InvalidConfigurationException(
+                'Configuration must contain a bearerToken when authType is "bearer".',
+                1756200049
+            );
+        }
+
         if (!isset($this->configuration['publicBaseUri']) || $this->configuration['publicBaseUri'] === '') {
             $this->capabilities->removeCapability(Capabilities::CAPABILITY_PUBLIC);
         }
@@ -103,7 +110,12 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function getDefaultFolder(): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200099);
+        $identifier = '/user_upload/';
+        if (!$this->folderExists($identifier)) {
+            $identifier = $this->createFolder('user_upload');
+        }
+
+        return $identifier;
     }
 
     public function sanitizeFileName(string $fileName): string

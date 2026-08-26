@@ -7,10 +7,90 @@
                 <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.base_uri</label>
                 <config>
                     <type>input</type>
+                    <required>1</required>
                     <size>40</size>
                     <eval>trim,required</eval>
                 </config>
             </baseUri>
+            <authType>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.auth_type</label>
+                <config>
+                    <type>select</type>
+                    <renderType>selectSingle</renderType>
+                    <items type="array">
+                        <numIndex index="0" type="array">
+                            <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.auth_type.basic</label>
+                            <value>basic</value>
+                        </numIndex>
+                        <numIndex index="1" type="array">
+                            <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.auth_type.bearer</label>
+                            <value>bearer</value>
+                        </numIndex>
+                    </items>
+                    <default>basic</default>
+                </config>
+            </authType>
+            <username>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.username</label>
+                <config>
+                    <type>input</type>
+                    <size>30</size>
+                    <eval>trim</eval>
+                    <displayCond>FIELD:authType:=:basic</displayCond>
+                </config>
+            </username>
+            <password>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.password</label>
+                <description>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.password.description</description>
+                <config>
+                    <type>input</type>
+                    <size>30</size>
+                    <displayCond>FIELD:authType:=:basic</displayCond>
+                </config>
+            </password>
+            <bearerToken>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.bearer_token</label>
+                <description>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.password.description</description>
+                <config>
+                    <type>input</type>
+                    <size>40</size>
+                    <eval>trim</eval>
+                    <displayCond>FIELD:authType:=:bearer</displayCond>
+                </config>
+            </bearerToken>
+            <verifySsl>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.verify_ssl</label>
+                <config>
+                    <type>check</type>
+                    <default>1</default>
+                </config>
+            </verifySsl>
+            <caseSensitive>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.case_sensitive</label>
+                <config>
+                    <type>check</type>
+                    <default>1</default>
+                </config>
+            </caseSensitive>
+            <cacheLifetime>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.cache_lifetime</label>
+                <config>
+                    <type>number</type>
+                    <default>3600</default>
+                    <range>
+                        <lower>0</lower>
+                    </range>
+                </config>
+            </cacheLifetime>
+            <publicBaseUri>
+                <label>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.public_base_uri</label>
+                <description>LLL:EXT:fal_webdav_driver/Resources/Private/Language/locallang.xlf:flexform.public_base_uri.description</description>
+                <config>
+                    <type>input</type>
+                    <size>40</size>
+                    <eval>trim</eval>
+                </config>
+            </publicBaseUri>
         </el>
     </ROOT>
 </T3DataStructure>
