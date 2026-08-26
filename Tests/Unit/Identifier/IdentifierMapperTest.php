@@ -22,6 +22,15 @@ final class IdentifierMapperTest extends UnitTestCase
     }
 
     #[Test]
+    public function toWebDavPathPreservesTrailingSlashForFolders(): void
+    {
+        $mapper = new IdentifierMapper('https://dav.example.com/remote.php/dav/files/user/');
+
+        self::assertSame('Photos/', $mapper->toWebDavPath('/Photos/'));
+        self::assertSame('', $mapper->toWebDavPath('/'));
+    }
+
+    #[Test]
     public function fromHrefStripsAbsoluteBaseUriAndDecodesSegments(): void
     {
         $mapper = new IdentifierMapper('https://dav.example.com/remote.php/dav/files/user/');

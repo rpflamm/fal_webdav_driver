@@ -22,8 +22,9 @@ final class IdentifierMapper
     {
         $segments = array_filter(explode('/', $identifier), static fn(string $segment): bool => $segment !== '');
         $encodedSegments = array_map(rawurlencode(...), $segments);
+        $path = implode('/', $encodedSegments);
 
-        return implode('/', $encodedSegments);
+        return $path !== '' && str_ends_with($identifier, '/') ? $path . '/' : $path;
     }
 
     /**
