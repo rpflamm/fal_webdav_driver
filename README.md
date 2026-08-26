@@ -49,3 +49,7 @@ configured via FlexForm. Restrict backend access to the File Storage module acco
 - `hash()` is not derived from the WebDAV ETag (which is not a reliable content hash across
   servers). It downloads/caches the file and computes a real `sha1` hash locally, which can trigger
   a full download for large, previously uncached files.
+
+## Development notes
+
+This project was developed with the assistance of AI coding agents; all generated code has been reviewed by a human before being committed.
