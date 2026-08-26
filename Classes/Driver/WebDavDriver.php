@@ -16,6 +16,7 @@ use Sabre\HTTP\ClientHttpException;
 use TYPO3\CMS\Core\Resource\Capabilities;
 use TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
+use TYPO3\CMS\Core\Resource\Exception\FileOperationErrorException;
 use TYPO3\CMS\Core\Resource\Exception\FolderDoesNotExistException;
 use TYPO3\CMS\Core\Resource\Exception\InvalidConfigurationException;
 use TYPO3\CMS\Core\Resource\Exception\InvalidFileNameException;
@@ -155,17 +156,63 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function createFolder(string $newFolderName, string $parentFolderIdentifier = '', bool $recursive = false): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200005);
+        $parentFolderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($parentFolderIdentifier);
+        $newFolderName = trim($newFolderName, '/');
+
+        if (!$recursive) {
+            $newFolderName = $this->sanitizeFileName($newFolderName);
+            $newIdentifier = $this->canonicalizeAndCheckFolderIdentifier($parentFolderIdentifier . $newFolderName . '/');
+            $this->sendRequest('MKCOL', $newIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER, 'write');
+
+            return $newIdentifier;
+        }
+
+        $segments = array_map(
+            $this->sanitizeFileName(...),
+            array_filter(explode('/', $newFolderName), static fn(string $segment): bool => $segment !== '')
+        );
+
+        $currentIdentifier = $parentFolderIdentifier;
+        foreach ($segments as $segment) {
+            $currentIdentifier = $this->canonicalizeAndCheckFolderIdentifier($currentIdentifier . $segment . '/');
+            if (!$this->folderExists($currentIdentifier)) {
+                $this->sendRequest('MKCOL', $currentIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER, 'write');
+            }
+        }
+
+        return $currentIdentifier;
     }
 
     public function renameFolder(string $folderIdentifier, string $newName): array
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200006);
+        $folderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($folderIdentifier);
+        $newName = $this->sanitizeFileName($newName);
+        $targetIdentifier = $this->canonicalizeAndCheckFolderIdentifier(
+            $this->getParentFolderIdentifierOfIdentifier($folderIdentifier) . $newName . '/'
+        );
+
+        $affectedEntries = $this->collectEntries($folderIdentifier, true);
+        $this->transferResource('MOVE', $folderIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER);
+        $this->cacheService->invalidate($folderIdentifier);
+
+        return $this->buildIdentifierMap($folderIdentifier, $targetIdentifier, $affectedEntries);
     }
 
     public function deleteFolder(string $folderIdentifier, bool $deleteRecursively = false): bool
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200007);
+        $folderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($folderIdentifier);
+
+        if (!$deleteRecursively && !$this->isFolderEmpty($folderIdentifier)) {
+            throw new FileOperationErrorException(
+                sprintf('Folder "%s" is not empty.', $folderIdentifier),
+                1756200044
+            );
+        }
+
+        $this->sendRequest('DELETE', $folderIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER, 'write');
+        $this->cacheService->invalidate($folderIdentifier);
+
+        return true;
     }
 
     public function fileExists(string $fileIdentifier): bool
@@ -185,32 +232,72 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function addFile(string $localFilePath, string $targetFolderIdentifier, string $newFileName = '', bool $removeOriginal = true): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200011);
+        $targetFolderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($targetFolderIdentifier);
+        $fileName = $this->sanitizeFileName($newFileName !== '' ? $newFileName : PathUtility::basename($localFilePath));
+        $targetIdentifier = $this->canonicalizeAndCheckFileIdentifier($targetFolderIdentifier . $fileName);
+
+        $this->uploadFile($targetIdentifier, (string) file_get_contents($localFilePath));
+
+        if ($removeOriginal) {
+            @unlink($localFilePath);
+        }
+
+        return $targetIdentifier;
     }
 
     public function createFile(string $fileName, string $parentFolderIdentifier): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200012);
+        $parentFolderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($parentFolderIdentifier);
+        $fileName = $this->sanitizeFileName(ltrim($fileName, '/'));
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($parentFolderIdentifier . $fileName);
+
+        $this->uploadFile($fileIdentifier, '');
+
+        return $fileIdentifier;
     }
 
     public function copyFileWithinStorage(string $fileIdentifier, string $targetFolderIdentifier, string $fileName): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200013);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $targetIdentifier = $this->canonicalizeAndCheckFileIdentifier(
+            $this->canonicalizeAndCheckFolderIdentifier($targetFolderIdentifier) . $fileName
+        );
+
+        $this->transferResource('COPY', $fileIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FILE);
+
+        return $targetIdentifier;
     }
 
     public function renameFile(string $fileIdentifier, string $newName): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200014);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $newName = $this->sanitizeFileName($newName);
+        $targetIdentifier = $this->canonicalizeAndCheckFileIdentifier(
+            $this->getParentFolderIdentifierOfIdentifier($fileIdentifier) . $newName
+        );
+
+        $this->transferResource('MOVE', $fileIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FILE);
+        $this->cacheService->invalidate($fileIdentifier);
+
+        return $targetIdentifier;
     }
 
     public function replaceFile(string $fileIdentifier, string $localFilePath): bool
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200015);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $this->uploadFile($fileIdentifier, (string) file_get_contents($localFilePath));
+        $this->cacheService->invalidate($fileIdentifier);
+
+        return true;
     }
 
     public function deleteFile(string $fileIdentifier): bool
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200016);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $this->sendRequest('DELETE', $fileIdentifier, WebDavStatusCodeMapper::RESOURCE_FILE, 'write');
+        $this->cacheService->invalidate($fileIdentifier);
+
+        return true;
     }
 
     public function hash(string $fileIdentifier, string $hashAlgorithm): string
@@ -230,17 +317,41 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function moveFileWithinStorage(string $fileIdentifier, string $targetFolderIdentifier, string $newFileName): string
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200018);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $targetIdentifier = $this->canonicalizeAndCheckFileIdentifier(
+            $this->canonicalizeAndCheckFolderIdentifier($targetFolderIdentifier) . $newFileName
+        );
+
+        $this->transferResource('MOVE', $fileIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FILE);
+        $this->cacheService->invalidate($fileIdentifier);
+
+        return $targetIdentifier;
     }
 
     public function moveFolderWithinStorage(string $sourceFolderIdentifier, string $targetFolderIdentifier, string $newFolderName): array
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200019);
+        $sourceFolderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($sourceFolderIdentifier);
+        $targetIdentifier = $this->canonicalizeAndCheckFolderIdentifier(
+            $this->canonicalizeAndCheckFolderIdentifier($targetFolderIdentifier) . $newFolderName . '/'
+        );
+
+        $affectedEntries = $this->collectEntries($sourceFolderIdentifier, true);
+        $this->transferResource('MOVE', $sourceFolderIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER);
+        $this->cacheService->invalidate($sourceFolderIdentifier);
+
+        return $this->buildIdentifierMap($sourceFolderIdentifier, $targetIdentifier, $affectedEntries);
     }
 
     public function copyFolderWithinStorage(string $sourceFolderIdentifier, string $targetFolderIdentifier, string $newFolderName): bool
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200020);
+        $sourceFolderIdentifier = $this->canonicalizeAndCheckFolderIdentifier($sourceFolderIdentifier);
+        $targetIdentifier = $this->canonicalizeAndCheckFolderIdentifier(
+            $this->canonicalizeAndCheckFolderIdentifier($targetFolderIdentifier) . $newFolderName . '/'
+        );
+
+        $this->transferResource('COPY', $sourceFolderIdentifier, $targetIdentifier, WebDavStatusCodeMapper::RESOURCE_FOLDER, ['Depth' => 'infinity']);
+
+        return true;
     }
 
     public function getFileContents(string $fileIdentifier): string
@@ -252,7 +363,11 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function setFileContents(string $fileIdentifier, string $contents): int
     {
-        throw new \RuntimeException('Not implemented yet.', 1756200022);
+        $fileIdentifier = $this->canonicalizeAndCheckFileIdentifier($fileIdentifier);
+        $this->uploadFile($fileIdentifier, $contents);
+        $this->cacheService->invalidate($fileIdentifier);
+
+        return strlen($contents);
     }
 
     public function fileExistsInFolder(string $fileName, string $folderIdentifier): bool
@@ -375,6 +490,83 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
         } catch (FileDoesNotExistException|FolderDoesNotExistException) {
             return false;
         }
+    }
+
+    private function uploadFile(string $fileIdentifier, string $contents): void
+    {
+        $davPath = $this->identifierMapper->toWebDavPath($fileIdentifier);
+
+        try {
+            $response = $this->client->request('PUT', $davPath, $contents);
+        } catch (ClientException $e) {
+            throw new WebDavConnectionException(
+                sprintf('Could not upload "%s" to the WebDAV server: %s', $fileIdentifier, $e->getMessage()),
+                1756200045,
+                $e
+            );
+        }
+
+        if ((int) $response['statusCode'] >= 400) {
+            throw $this->statusCodeMapper->map((int) $response['statusCode'], $fileIdentifier, WebDavStatusCodeMapper::RESOURCE_FILE, 'write');
+        }
+    }
+
+    private function sendRequest(string $method, string $identifier, string $resourceType, string $access): void
+    {
+        $davPath = $this->identifierMapper->toWebDavPath($identifier);
+
+        try {
+            $response = $this->client->request($method, $davPath);
+        } catch (ClientException $e) {
+            throw new WebDavConnectionException(
+                sprintf('Could not %s "%s" on the WebDAV server: %s', $method, $identifier, $e->getMessage()),
+                1756200046,
+                $e
+            );
+        }
+
+        if ((int) $response['statusCode'] >= 400) {
+            throw $this->statusCodeMapper->map((int) $response['statusCode'], $identifier, $resourceType, $access);
+        }
+    }
+
+    /**
+     * @param array<string, string> $extraHeaders
+     */
+    private function transferResource(string $method, string $sourceIdentifier, string $targetIdentifier, string $resourceType, array $extraHeaders = []): void
+    {
+        $sourcePath = $this->identifierMapper->toWebDavPath($sourceIdentifier);
+        $targetUrl = rtrim((string) $this->configuration['baseUri'], '/') . '/' . $this->identifierMapper->toWebDavPath($targetIdentifier);
+        $headers = $extraHeaders + ['Destination' => $targetUrl, 'Overwrite' => 'F'];
+
+        try {
+            $response = $this->client->request($method, $sourcePath, null, $headers);
+        } catch (ClientException $e) {
+            throw new WebDavConnectionException(
+                sprintf('Could not %s "%s" to "%s": %s', $method, $sourceIdentifier, $targetIdentifier, $e->getMessage()),
+                1756200047,
+                $e
+            );
+        }
+
+        if ((int) $response['statusCode'] >= 400) {
+            throw $this->statusCodeMapper->map((int) $response['statusCode'], $sourceIdentifier, $resourceType, 'write');
+        }
+    }
+
+    /**
+     * @param array<string, array{size: int, mtime: int, ctime: int, mimetype: string, isCollection: bool, etag: string|null, name: string}> $affectedEntries
+     *
+     * @return array<non-empty-string, non-empty-string>
+     */
+    private function buildIdentifierMap(string $sourceIdentifier, string $targetIdentifier, array $affectedEntries): array
+    {
+        $map = [$sourceIdentifier => $targetIdentifier];
+        foreach (array_keys($affectedEntries) as $oldIdentifier) {
+            $map[$oldIdentifier] = $targetIdentifier . substr($oldIdentifier, strlen($sourceIdentifier));
+        }
+
+        return $map;
     }
 
     private function resolveLocalCopy(string $fileIdentifier): string
@@ -553,9 +745,6 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
         return true;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     /**
      * @param array{size: int, mtime: int, ctime: int, mimetype: string, isCollection: bool, etag: string|null} $translated
      * @param list<string> $propertiesToExtract

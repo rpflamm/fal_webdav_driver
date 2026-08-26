@@ -7,6 +7,8 @@ namespace RPflamm\FalWebDavDriver\Tests\Unit\Client;
 use PHPUnit\Framework\Attributes\Test;
 use RPflamm\FalWebDavDriver\Client\WebDavStatusCodeMapper;
 use RPflamm\FalWebDavDriver\Exception\UnexpectedWebDavResponseException;
+use TYPO3\CMS\Core\Resource\Exception\ExistingTargetFileNameException;
+use TYPO3\CMS\Core\Resource\Exception\ExistingTargetFolderException;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\Exception\FileOperationErrorException;
 use TYPO3\CMS\Core\Resource\Exception\FolderDoesNotExistException;
@@ -61,12 +63,27 @@ final class WebDavStatusCodeMapperTest extends UnitTestCase
     {
         $mapper = new WebDavStatusCodeMapper();
 
-        foreach ([409, 412, 423, 507] as $statusCode) {
+        foreach ([409, 423, 507] as $statusCode) {
             self::assertInstanceOf(
                 FileOperationErrorException::class,
                 $mapper->map($statusCode, '/foo.jpg', WebDavStatusCodeMapper::RESOURCE_FILE, WebDavStatusCodeMapper::ACCESS_WRITE)
             );
         }
+    }
+
+    #[Test]
+    public function mapsPreconditionFailedToExistingTargetExceptions(): void
+    {
+        $mapper = new WebDavStatusCodeMapper();
+
+        self::assertInstanceOf(
+            ExistingTargetFileNameException::class,
+            $mapper->map(412, '/foo.jpg', WebDavStatusCodeMapper::RESOURCE_FILE, WebDavStatusCodeMapper::ACCESS_WRITE)
+        );
+        self::assertInstanceOf(
+            ExistingTargetFolderException::class,
+            $mapper->map(412, '/foo/', WebDavStatusCodeMapper::RESOURCE_FOLDER, WebDavStatusCodeMapper::ACCESS_WRITE)
+        );
     }
 
     #[Test]

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RPflamm\FalWebDavDriver\Client;
 
 use RPflamm\FalWebDavDriver\Exception\UnexpectedWebDavResponseException;
+use TYPO3\CMS\Core\Resource\Exception\ExistingTargetFileNameException;
+use TYPO3\CMS\Core\Resource\Exception\ExistingTargetFolderException;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\Exception\FileOperationErrorException;
 use TYPO3\CMS\Core\Resource\Exception\FolderDoesNotExistException;
@@ -36,7 +38,13 @@ final class WebDavStatusCodeMapper
             return $this->mapPermissionException($identifier, $resourceType, $access);
         }
 
-        if (in_array($statusCode, [409, 412, 423, 507], true)) {
+        if ($statusCode === 412) {
+            return $resourceType === self::RESOURCE_FOLDER
+                ? new ExistingTargetFolderException(sprintf('Target folder "%s" already exists.', $identifier), 1756200209)
+                : new ExistingTargetFileNameException(sprintf('Target file "%s" already exists.', $identifier), 1756200210);
+        }
+
+        if (in_array($statusCode, [409, 423, 507], true)) {
             return new FileOperationErrorException(
                 sprintf('WebDAV request for "%s" failed with status %d.', $identifier, $statusCode),
                 1756200203
