@@ -7,6 +7,7 @@ on:
 
 env:
   PHP_EXTENSIONS: mbstring, xml, curl, zip, intl, gd, mysqli, pdo_mysql, opcache
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   lint:
