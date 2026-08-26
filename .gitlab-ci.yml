@@ -1,0 +1,83 @@
+variables:
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
+  CI_ROOT: "/tmp/ci-root"
+  PHP_EXTENSIONS: "mbstring xml curl zip intl gd mysqli pdo_mysql opcache"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .composer-cache/
+
+stages:
+  - lint
+  - test
+
+.php_base:
+  image: php:${PHP_VERSION}-cli
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq git zip unzip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libicu-dev libonig-dev libcurl4-openssl-dev
+    - docker-php-ext-configure gd --with-freetype --with-jpeg
+    - docker-php-ext-install -j"$(nproc)" ${PHP_EXTENSIONS} > /dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+lint:
+  extends: .php_base
+  stage: lint
+  variables:
+    PHP_VERSION: "8.2"
+  script:
+    - composer update --no-progress --prefer-dist
+    - composer ci:php:lint
+    - composer ci:php:cgl
+
+phpstan:
+  extends: .php_base
+  stage: lint
+  variables:
+    PHP_VERSION: "8.2"
+  script:
+    - composer update --no-progress --prefer-dist
+    - composer ci:php:phpstan
+
+.unit_base:
+  extends: .php_base
+  stage: test
+  script:
+    - Build/Scripts/ci-bootstrap.sh ${CI_ROOT} "${TYPO3_CONSTRAINT}"
+    - cd ${CI_ROOT} && vendor/bin/phpunit -c packages/fal_webdav_driver/Build/UnitTests.xml
+
+unit:php8.2-t14:
+  extends: .unit_base
+  variables:
+    PHP_VERSION: "8.2"
+    TYPO3_CONSTRAINT: "^14.3"
+
+unit:php8.3-t14:
+  extends: .unit_base
+  variables:
+    PHP_VERSION: "8.3"
+    TYPO3_CONSTRAINT: "^14.3"
+
+unit:php8.4-t14:
+  extends: .unit_base
+  variables:
+    PHP_VERSION: "8.4"
+    TYPO3_CONSTRAINT: "^14.3"
+
+functional:php8.2-t14:
+  extends: .unit_base
+  variables:
+    PHP_VERSION: "8.2"
+    TYPO3_CONSTRAINT: "^14.3"
+    WEBDAV_TEST_BASE_URI: "http://webdav/"
+  services:
+    - name: bytemark/webdav:2.4
+      alias: webdav
+      variables:
+        AUTH_TYPE: Basic
+        USERNAME: webdav
+        PASSWORD: webdav-secret
+  script:
+    - Build/Scripts/ci-bootstrap.sh ${CI_ROOT} "${TYPO3_CONSTRAINT}"
+    - cd ${CI_ROOT} && WEBDAV_TEST_USERNAME=webdav WEBDAV_TEST_PASSWORD=webdav-secret vendor/bin/phpunit -c packages/fal_webdav_driver/Build/FunctionalTests.xml

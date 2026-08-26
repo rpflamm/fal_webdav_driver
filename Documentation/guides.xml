@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<guides
+    xmlns="https://www.phpdoc.org/guides"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://www.phpdoc.org/guides vendor/phpdocumentor/guides-cli/resources/schema/guides.xsd"
+    theme="typo3docs"
+    default-code-language="php"
+    links-are-relative="true"
+>
+    <project
+        title="FAL WebDAV Driver"
+        version="1.0"
+        release="1.0.0"
+        copyright="since 2026 by RPflamm"
+    />
+
+    <extension
+        class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
+        typo3-core-preferred="stable"
+        interlink-shortcode="rpflamm/fal-webdav-driver"
+    />
+
+    <input directory="." format="rst">
+        <extension format="rst">rst</extension>
+    </input>
+
+    <output directory="_build/html" format="html"/>
+</guides>
