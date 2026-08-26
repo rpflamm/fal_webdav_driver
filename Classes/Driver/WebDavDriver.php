@@ -93,10 +93,17 @@ final class WebDavDriver extends AbstractHierarchicalFilesystemDriver
 
     public function initialize(): void
     {
+        // Core calls initialize() unconditionally, even when processConfiguration()
+        // above has thrown InvalidConfigurationException (ResourceStorage catches that
+        // exception and merely marks the storage offline). $this->configuration might
+        // therefore be missing "baseUri" here; fall back to a safe, non-throwing value
+        // instead of relying on it being present.
+        $baseUri = isset($this->configuration['baseUri']) && $this->configuration['baseUri'] !== ''
+            ? (string) $this->configuration['baseUri']
+            : '/';
+
         $this->client = (new WebDavClientFactory())->create($this->configuration);
-        $this->identifierMapper = new IdentifierMapper(
-            rtrim((string) $this->configuration['baseUri'], '/') . '/'
-        );
+        $this->identifierMapper = new IdentifierMapper(rtrim($baseUri, '/') . '/');
         $this->cacheService = new LocalFileCacheService(
             (int) $this->storageUid,
             (int) ($this->configuration['cacheLifetime'] ?? 3600)

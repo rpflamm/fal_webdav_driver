@@ -53,6 +53,26 @@ final class WebDavDriverConfigurationTest extends UnitTestCase
     }
 
     #[Test]
+    public function initializeDoesNotEmitWarningsWhenBaseUriIsMissing(): void
+    {
+        // TYPO3 core's ResourceStorage constructor catches InvalidConfigurationException
+        // from processConfiguration() (e.g. a storage still being configured, missing
+        // baseUri) and marks the storage offline, but unconditionally calls initialize()
+        // afterwards regardless. initialize() must not emit warnings/errors in that case.
+        $driver = new WebDavDriver([]);
+        $driver->setStorageUid(9401);
+
+        try {
+            $driver->processConfiguration();
+        } catch (InvalidConfigurationException) {
+            // expected: baseUri is missing
+        }
+
+        $driver->initialize();
+        $this->addToAssertionCount(1);
+    }
+
+    #[Test]
     public function getDefaultFolderReturnsUserUploadWithoutCreatingItWhenItAlreadyExists(): void
     {
         $clientMock = $this->createMock(Client::class);
