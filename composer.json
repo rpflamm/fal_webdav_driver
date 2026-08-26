@@ -1,0 +1,66 @@
+{
+    "name": "rpflamm/fal-webdav-driver",
+    "type": "typo3-cms-extension",
+    "description": "FAL storage driver that mounts WebDAV directories directly into the TYPO3 fileadmin.",
+    "license": [
+        "GPL-2.0-or-later"
+    ],
+    "keywords": [
+        "typo3",
+        "webdav",
+        "fal",
+        "driver"
+    ],
+    "authors": [
+        {
+            "name": "RPflamm"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "typo3/cms-core": "^14.3"
+    },
+    "require-dev": {
+        "typo3/testing-framework": "^9.6",
+        "phpunit/phpunit": "^11.5 || ^12.0",
+        "friendsofphp/php-cs-fixer": "^3.75",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "saschaegerer/phpstan-typo3": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "RPflamm\\FalWebDavDriver\\": "Classes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RPflamm\\FalWebDavDriver\\Tests\\": "Tests/"
+        }
+    },
+    "extra": {
+        "typo3/cms": {
+            "extension-key": "fal_webdav_driver"
+        },
+        "branch-alias": {
+            "dev-main": "1.x-dev"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "typo3/class-alias-loader": true,
+            "typo3/cms-composer-installers": true
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "ci:php:lint": "find Classes Configuration Tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l",
+        "ci:php:cgl": "php-cs-fixer fix --diff --dry-run",
+        "ci:php:cgl:fix": "php-cs-fixer fix",
+        "ci:php:phpstan": "phpstan analyse --configuration=phpstan.neon"
+    }
+}

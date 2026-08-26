@@ -1,0 +1,11 @@
+parameters:
+    level: 6
+    paths:
+        - Classes
+        - Tests
+    excludePaths:
+        analyseAndScan:
+            - Tests/Functional/Fixtures/*
+    phpVersion: 80200
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
