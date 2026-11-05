@@ -62,6 +62,6 @@
         "ci:php:lint": "find Classes Configuration Tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l",
         "ci:php:cgl": "php-cs-fixer fix --diff --dry-run",
         "ci:php:cgl:fix": "php-cs-fixer fix",
-        "ci:php:phpstan": "phpstan analyse --configuration=phpstan.neon"
+        "ci:php:phpstan": "phpstan analyse --configuration=phpstan.neon --memory-limit=1G"
     }
 }
